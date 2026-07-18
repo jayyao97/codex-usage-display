@@ -1,0 +1,12 @@
+.pio/
+companion/.venv/
+__pycache__/
+*.pyc
+.DS_Store
+.coverage
+.pytest_cache/
+*.egg-info/
+build/
+dist/
+.idea/
+.vscode/

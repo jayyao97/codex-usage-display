@@ -1,0 +1,29 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codex-usage-display"
+version = "0.1.0"
+description = "macOS BLE companion for the Codex Usage Display"
+requires-python = ">=3.9"
+dependencies = ["bleak>=0.22,<2"]
+license = {text = "MIT"}
+authors = [{name = "Jay Yao"}]
+classifiers = [
+  "License :: OSI Approved :: MIT License",
+  "Operating System :: MacOS",
+  "Programming Language :: Python :: 3",
+  "Programming Language :: Python :: 3.9",
+]
+
+[project.urls]
+Repository = "https://github.com/jayyao97/codex-usage-display"
+Issues = "https://github.com/jayyao97/codex-usage-display/issues"
+
+[project.scripts]
+codex-usage-display = "codex_display.main:main"
+
+[tool.setuptools.packages.find]
+where = ["."]
+include = ["codex_display*"]
