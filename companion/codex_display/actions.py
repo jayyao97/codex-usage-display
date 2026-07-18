@@ -18,6 +18,9 @@ async def _run(*args: str) -> Tuple[bool, str]:
 async def perform_action(
     action: str, refresh: Callable[[], Awaitable[None]]
 ) -> Tuple[bool, str]:
+    if action not in {"refresh", "focus_codex", "new_task"}:
+        return False, "NOT ALLOWED"
+
     if action == "refresh":
         await refresh()
         return True, "UPDATED"
@@ -42,4 +45,4 @@ async def perform_action(
             return False, "ALLOW ACCESSIBILITY"
         return False, "ACTION FAILED"
 
-    return False, "NOT ALLOWED"
+    raise AssertionError("allowlisted action was not handled")
