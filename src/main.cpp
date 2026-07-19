@@ -349,9 +349,6 @@ void updateBle() {
     } else if (was_running && !is_running && screen_on) {
       last_activity_ms = millis();
     }
-    // A valid encrypted status proves that secure pairing has completed.
-    // Some BLE stack versions do not deliver the authentication callback.
-    uiHidePairingCode();
   }
 
   if (!bleConnected()) {
@@ -378,7 +375,6 @@ void updateBle() {
 
   bool pairing_success = false;
   if (bleTakePairingFinished(pairing_success)) {
-    uiHidePairingCode();
     uiShowToast(pairing_success ? "PAIRED" : "PAIRING FAILED");
   }
 }
@@ -429,7 +425,8 @@ void loop() {
       app_state.data_valid && app_state.active_threads > 0
           ? kRunningScreenTimeoutMs
           : kIdleScreenTimeoutMs;
-  if (screen_on && millis() - last_activity_ms >= screen_timeout_ms) {
+  if (screen_on && !uiPairingCodeVisible() &&
+      millis() - last_activity_ms >= screen_timeout_ms) {
     setScreenOn(false);
   }
 

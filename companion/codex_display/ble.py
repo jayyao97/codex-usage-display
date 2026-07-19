@@ -14,6 +14,9 @@ from .protocol import decode_command, encode_result
 
 logger = logging.getLogger(__name__)
 
+BLE_OPERATION_TIMEOUT_SECONDS = 10
+BLE_DISCONNECT_TIMEOUT_SECONDS = 5
+
 
 class BleCompanion:
     def __init__(
@@ -74,22 +77,37 @@ class BleCompanion:
                 self.connected_event.clear()
                 disconnected.set()
 
+            client = BleakClient(
+                device, disconnected_callback=on_disconnect
+            )
             try:
-                async with BleakClient(
-                    device, disconnected_callback=on_disconnect
-                ) as client:
-                    backoff = 1.0
-                    logger.info("已连接 %s", device.name or device.address)
-                    await self._run_connection(client, disconnected)
+                await client.connect()
+                backoff = 1.0
+                logger.info("已连接 %s", device.name or device.address)
+                await self._run_connection(client, disconnected)
             except asyncio.CancelledError:
                 raise
             except Exception as error:
                 logger.warning("BLE 连接中断：%s", error)
             finally:
                 self.connected_event.clear()
+                await self._disconnect(client)
 
             await asyncio.sleep(backoff)
             backoff = min(backoff * 2, 60)
+
+    async def _disconnect(self, client: Any) -> None:
+        if not client.is_connected:
+            return
+        try:
+            await asyncio.wait_for(
+                client.disconnect(),
+                timeout=BLE_DISCONNECT_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError:
+            logger.warning("BLE 断开超时，继续重新扫描")
+        except Exception as error:
+            logger.warning("BLE 断开失败：%s", error)
 
     async def _run_connection(
         self, client: Any, disconnected: asyncio.Event
@@ -143,7 +161,22 @@ class BleCompanion:
 
     async def _send_status(self, client: Any) -> None:
         payload = await self._get_status()
-        await client.write_gatt_char(STATUS_UUID, payload, response=True)
+        await self._write_gatt_char(client, STATUS_UUID, payload)
+
+    async def _write_gatt_char(
+        self, client: Any, uuid: str, payload: bytes
+    ) -> None:
+        try:
+            await asyncio.wait_for(
+                client.write_gatt_char(
+                    uuid,
+                    payload,
+                    response=True,
+                ),
+                timeout=BLE_OPERATION_TIMEOUT_SECONDS,
+            )
+        except asyncio.TimeoutError as error:
+            raise asyncio.TimeoutError("BLE GATT 写入超时") from error
 
     async def _command_loop(self, client: Any) -> None:
         while client.is_connected:
@@ -155,8 +188,8 @@ class BleCompanion:
                 cache_key = (command["sid"], request_id)
                 if cache_key in self._recent_results:
                     payload = self._recent_results[cache_key]
-                    await client.write_gatt_char(
-                        RESULT_UUID, payload, response=True
+                    await self._write_gatt_char(
+                        client, RESULT_UUID, payload
                     )
                     continue
                 ok, message = await perform_action(command["a"], self._request_refresh)
@@ -171,10 +204,6 @@ class BleCompanion:
                 if len(self._recent_results) > 32:
                     oldest = next(iter(self._recent_results))
                     del self._recent_results[oldest]
-            await client.write_gatt_char(
-                RESULT_UUID,
-                payload,
-                response=True,
-            )
+            await self._write_gatt_char(client, RESULT_UUID, payload)
             if ok:
                 await self._send_status(client)

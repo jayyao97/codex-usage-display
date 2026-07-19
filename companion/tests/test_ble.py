@@ -17,6 +17,16 @@ class FakeBleClient:
             self.is_connected = False
 
 
+class HangingBleClient:
+    is_connected = True
+
+    async def write_gatt_char(self, uuid, payload, response):
+        await asyncio.Event().wait()
+
+    async def disconnect(self):
+        await asyncio.Event().wait()
+
+
 class BleTests(unittest.IsolatedAsyncioTestCase):
     async def test_connection_refreshes_before_first_status(self):
         order = []
@@ -80,6 +90,39 @@ class BleTests(unittest.IsolatedAsyncioTestCase):
         action.assert_awaited_once()
         self.assertEqual(len(client.writes), 3)
         self.assertEqual(client.writes[0][1], client.writes[2][1])
+
+    async def test_status_write_times_out(self):
+        async def status():
+            return b"{}"
+
+        async def refresh():
+            return None
+
+        companion = BleCompanion(status, refresh)
+        client = HangingBleClient()
+
+        with patch(
+            "companion.codex_display.ble.BLE_OPERATION_TIMEOUT_SECONDS",
+            0.01,
+        ):
+            with self.assertRaises(asyncio.TimeoutError):
+                await companion._send_status(client)
+
+    async def test_disconnect_timeout_does_not_block_reconnect(self):
+        async def status():
+            return b"{}"
+
+        async def refresh():
+            return None
+
+        companion = BleCompanion(status, refresh)
+        client = HangingBleClient()
+
+        with patch(
+            "companion.codex_display.ble.BLE_DISCONNECT_TIMEOUT_SECONDS",
+            0.01,
+        ):
+            await companion._disconnect(client)
 
 
 if __name__ == "__main__":
