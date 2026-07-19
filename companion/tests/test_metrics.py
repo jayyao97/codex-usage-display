@@ -72,6 +72,7 @@ class MetricsTests(unittest.TestCase):
         self.assertEqual(snapshot.limit_window_minutes, 10080)
         self.assertEqual(snapshot.quota_reset_seconds, 7200)
         self.assertEqual(snapshot.tokens_today, 100)
+        self.assertFalse(snapshot.tokens_today_estimated)
         self.assertEqual(snapshot.tokens_7d, 230)
         self.assertEqual(snapshot.reset_credits, 2)
         self.assertEqual(snapshot.next_credit_expiry_seconds, 3600)
@@ -98,6 +99,31 @@ class MetricsTests(unittest.TestCase):
             utc_offset_minutes=0,
         )
         self.assertEqual(snapshot.remaining_percent, 96)
+
+    def test_missing_today_bucket_is_estimated_but_official_zero_is_not(self):
+        missing = build_snapshot(
+            {},
+            {"dailyUsageBuckets": []},
+            [],
+            now=1,
+            local_date=date(2027, 1, 10),
+            utc_offset_minutes=0,
+        )
+        official_zero = build_snapshot(
+            {},
+            {
+                "dailyUsageBuckets": [
+                    {"startDate": "2027-01-10", "tokens": 0}
+                ]
+            },
+            [],
+            now=1,
+            local_date=date(2027, 1, 10),
+            utc_offset_minutes=0,
+        )
+
+        self.assertTrue(missing.tokens_today_estimated)
+        self.assertFalse(official_zero.tokens_today_estimated)
 
     def test_rollout_started_without_completion_is_active(self):
         path = self._write_rollout(["task_complete", "task_started"])

@@ -5,8 +5,6 @@
 #include "app_state.h"
 
 struct BleActionResult {
-  uint32_t request_id;
-  bool ok;
   char message[49];
 };
 

@@ -7,6 +7,7 @@ from typing import Optional, Set
 from .app_server import AppServerClient
 from .ble import BleCompanion
 from .hook_events import HookActivityTracker
+from .local_usage import read_local_tokens
 from .metrics import (
     Snapshot,
     collect_active_thread_state,
@@ -39,6 +40,15 @@ class SnapshotCache:
         )
         return self._snapshot.active_threads + extra
 
+    def _current_snapshot(self) -> Snapshot:
+        assert self._snapshot is not None
+        snapshot = self._snapshot
+        if snapshot.tokens_today_estimated:
+            local_tokens = read_local_tokens()
+            if local_tokens is not None:
+                snapshot = replace(snapshot, tokens_today=local_tokens)
+        return replace(snapshot, active_threads=self._active_count())
+
     async def encoded(self) -> bytes:
         loop = asyncio.get_running_loop()
         if (
@@ -47,10 +57,7 @@ class SnapshotCache:
         ):
             await self.refresh()
         assert self._snapshot is not None
-        snapshot = replace(
-            self._snapshot,
-            active_threads=self._active_count(),
-        )
+        snapshot = self._current_snapshot()
         return encode_snapshot(snapshot, self._sequence)
 
     async def refresh(self) -> None:
@@ -60,13 +67,15 @@ class SnapshotCache:
             )
             self._updated_at = asyncio.get_running_loop().time()
             self._sequence += 1
+            current = self._current_snapshot()
             logging.info(
-                "数据已更新：剩余 %d%%，today %d，7d %d，reset %d，running %d",
-                self._snapshot.remaining_percent,
-                self._snapshot.tokens_today,
-                self._snapshot.tokens_7d,
-                self._snapshot.reset_credits,
-                self._active_count(),
+                "数据已更新：剩余 %d%%，today %s%d，7d %d，reset %d，running %d",
+                current.remaining_percent,
+                "~" if current.tokens_today_estimated else "",
+                current.tokens_today,
+                current.tokens_7d,
+                current.reset_credits,
+                current.active_threads,
             )
 
     async def activity_changed(self) -> None:

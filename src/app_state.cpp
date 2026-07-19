@@ -3,6 +3,12 @@
 #include <time.h>
 
 String formatCompactTokens(uint64_t tokens) {
+  if (tokens >= 1000000000000ULL) {
+    const double trillions = static_cast<double>(tokens) / 1000000000000.0;
+    const uint8_t decimals =
+        trillions >= 100 ? 0 : (trillions >= 10 ? 1 : 2);
+    return String(trillions, static_cast<unsigned int>(decimals)) + "T";
+  }
   if (tokens >= 1000000000ULL) {
     const double billions = static_cast<double>(tokens) / 1000000000.0;
     const uint8_t decimals = billions >= 100 ? 0 : (billions >= 10 ? 1 : 2);
@@ -53,8 +59,6 @@ const char* connectionLabel(ConnectionState state) {
   switch (state) {
     case ConnectionState::kDisconnected:
       return "OFFLINE";
-    case ConnectionState::kConnecting:
-      return "SEARCHING";
     case ConnectionState::kSyncing:
       return "SYNCING";
     case ConnectionState::kLinked:

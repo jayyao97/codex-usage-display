@@ -14,6 +14,7 @@ class Snapshot:
     limit_window_minutes: int
     quota_reset_seconds: int
     tokens_today: int
+    tokens_today_estimated: bool
     tokens_7d: int
     reset_credits: int
     next_credit_expiry_seconds: int
@@ -64,6 +65,7 @@ def build_snapshot(
         if item.get("startDate")
     }
     today_key = local_date.isoformat()
+    tokens_today_estimated = today_key not in buckets
     tokens_today = buckets.get(today_key, 0)
     tokens_7d = sum(
         buckets.get((local_date - timedelta(days=offset)).isoformat(), 0)
@@ -90,6 +92,7 @@ def build_snapshot(
         limit_window_minutes=limit_window_minutes,
         quota_reset_seconds=quota_reset_seconds,
         tokens_today=tokens_today,
+        tokens_today_estimated=tokens_today_estimated,
         tokens_7d=tokens_7d,
         reset_credits=reset_credits,
         next_credit_expiry_seconds=next_expiry_seconds,
