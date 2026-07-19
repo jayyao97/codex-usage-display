@@ -18,6 +18,7 @@ def encode_snapshot(snapshot: Snapshot, sequence: int) -> bytes:
         "u": snapshot.limit_window_minutes,
         "q": snapshot.quota_reset_seconds,
         "d": snapshot.tokens_today,
+        "e": 1 if snapshot.tokens_today_estimated else 0,
         "w": snapshot.tokens_7d,
         "c": snapshot.reset_credits,
         "x": snapshot.next_credit_expiry_seconds,

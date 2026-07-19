@@ -14,6 +14,7 @@ enum class ConnectionState : uint8_t {
 struct AppState {
   uint8_t remaining_percent = 0;
   uint64_t tokens_today = 0;
+  bool tokens_today_estimated = false;
   uint64_t tokens_7d = 0;
   uint8_t active_threads = 0;
 

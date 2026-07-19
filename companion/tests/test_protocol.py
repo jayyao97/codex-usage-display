@@ -18,6 +18,7 @@ class ProtocolTests(unittest.TestCase):
             limit_window_minutes=10080,
             quota_reset_seconds=604800,
             tokens_today=123456789,
+            tokens_today_estimated=True,
             tokens_7d=987654321,
             reset_credits=3,
             next_credit_expiry_seconds=2592000,
@@ -28,6 +29,7 @@ class ProtocolTests(unittest.TestCase):
         self.assertLessEqual(len(payload), 180)
         self.assertEqual(decoded["r"], 96)
         self.assertEqual(decoded["u"], 10080)
+        self.assertEqual(decoded["e"], 1)
         self.assertEqual(decoded["a"], 12)
 
     def test_accepts_allowlisted_command(self):

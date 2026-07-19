@@ -19,6 +19,10 @@ constexpr uint32_t kTextSecondary = 0xAEB8BD;
 constexpr uint32_t kTrack = 0x24282B;
 constexpr uint32_t kDivider = 0x303538;
 constexpr uint32_t kAmber = 0xFFB800;
+constexpr int kResetSegmentWidth = 22;
+constexpr int kResetSegmentGap = 8;
+constexpr int kResetTitleGap = 10;
+constexpr int kResetOpticalOffset = -8;
 
 UiActionHandler action_handler = nullptr;
 
@@ -98,6 +102,32 @@ lv_obj_t* createActionButton(lv_obj_t* parent, const char* text, int y,
 void hideToast(lv_timer_t*) {
   lv_obj_add_flag(toast, LV_OBJ_FLAG_HIDDEN);
   toast_timer = nullptr;
+}
+
+void layoutResetRow(uint8_t segment_count) {
+  lv_obj_update_layout(reset_title_label);
+  const int title_width = lv_obj_get_width(reset_title_label);
+  const int segments_width =
+      segment_count == 0
+          ? 0
+          : segment_count * kResetSegmentWidth +
+                (segment_count - 1) * kResetSegmentGap;
+  const int group_width =
+      title_width +
+      (segment_count == 0 ? 0 : kResetTitleGap + segments_width);
+  const int start_x =
+      (lv_obj_get_width(lv_scr_act()) - group_width) / 2 +
+      (segment_count == 0 ? 0 : kResetOpticalOffset);
+
+  lv_obj_set_pos(reset_title_label, start_x, 359);
+  const int segments_x = start_x + title_width + kResetTitleGap;
+  for (size_t i = 0; i < 6; ++i) {
+    lv_obj_set_pos(reset_segments[i],
+                   segments_x +
+                       static_cast<int>(i) *
+                           (kResetSegmentWidth + kResetSegmentGap),
+                   362);
+  }
 }
 
 void createMetricColumn(lv_obj_t* parent, int x, int width, const char* title,
@@ -181,16 +211,17 @@ void uiCreate(UiActionHandler handler) {
                   LV_ALIGN_TOP_MID, 0, 334);
 
   reset_title_label = createLabel("RESET", &lv_font_montserrat_12, kTextMuted,
-                                  LV_ALIGN_TOP_LEFT, 166, 359);
+                                  LV_ALIGN_TOP_LEFT, 0, 359);
   for (size_t i = 0; i < 6; ++i) {
     reset_segments[i] = lv_obj_create(screen);
     lv_obj_remove_style_all(reset_segments[i]);
-    lv_obj_set_size(reset_segments[i], 22, 6);
-    lv_obj_set_pos(reset_segments[i], 212 + static_cast<int>(i) * 30, 362);
+    lv_obj_set_size(reset_segments[i], kResetSegmentWidth, 6);
+    lv_obj_set_pos(reset_segments[i], 0, 362);
     lv_obj_set_style_radius(reset_segments[i], LV_RADIUS_CIRCLE, LV_PART_MAIN);
     lv_obj_set_style_bg_color(reset_segments[i], color(kCyan), LV_PART_MAIN);
     lv_obj_set_style_bg_opa(reset_segments[i], LV_OPA_COVER, LV_PART_MAIN);
   }
+  layoutResetRow(0);
 
   lv_obj_t* metrics = lv_obj_create(screen);
   lv_obj_set_pos(metrics, 24, 382);
@@ -203,12 +234,12 @@ void uiCreate(UiActionHandler handler) {
   lv_obj_set_style_pad_all(metrics, 0, LV_PART_MAIN);
   lv_obj_clear_flag(metrics, LV_OBJ_FLAG_SCROLLABLE);
 
-  createMetricColumn(metrics, 0, 108, "TODAY", &today_value_label, false);
-  createMetricColumn(metrics, 108, 112, "LAST 7D", &week_value_label, false);
-  createMetricColumn(metrics, 220, 94, "RUN", &run_value_label, true);
-  createMetricColumn(metrics, 314, 118, "NEXT EXP", &expiry_value_label, false);
+  createMetricColumn(metrics, 0, 120, "TODAY", &today_value_label, false);
+  createMetricColumn(metrics, 120, 108, "LAST 7D", &week_value_label, false);
+  createMetricColumn(metrics, 228, 64, "RUN", &run_value_label, true);
+  createMetricColumn(metrics, 292, 140, "NEXT EXP", &expiry_value_label, false);
 
-  for (int x : {108, 220, 314}) {
+  for (int x : {120, 228, 292}) {
     lv_obj_t* divider = lv_obj_create(metrics);
     lv_obj_remove_style_all(divider);
     lv_obj_set_pos(divider, x, 13);
@@ -351,8 +382,11 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
       "QUOTA RESET " + formatCountdown(quota_seconds);
   lv_label_set_text(quota_reset_label, quota_reset.c_str());
 
-  lv_label_set_text(today_value_label,
-                    formatCompactTokens(state.tokens_today).c_str());
+  String today_tokens = formatCompactTokens(state.tokens_today);
+  if (state.tokens_today_estimated) {
+    today_tokens = "~" + today_tokens;
+  }
+  lv_label_set_text(today_value_label, today_tokens.c_str());
   lv_label_set_text(week_value_label,
                     formatCompactTokens(state.tokens_7d).c_str());
   lv_label_set_text_fmt(run_value_label, "%u", state.active_threads);
@@ -365,6 +399,7 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
 
   if (state.reset_credits <= 6) {
     lv_label_set_text(reset_title_label, "RESET");
+    layoutResetRow(state.reset_credits);
     for (size_t i = 0; i < 6; ++i) {
       if (i < state.reset_credits) {
         lv_obj_clear_flag(reset_segments[i], LV_OBJ_FLAG_HIDDEN);
@@ -378,6 +413,7 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
     }
   } else {
     lv_label_set_text_fmt(reset_title_label, "RESET x%u", state.reset_credits);
+    layoutResetRow(0);
     for (lv_obj_t* segment : reset_segments) {
       lv_obj_add_flag(segment, LV_OBJ_FLAG_HIDDEN);
     }

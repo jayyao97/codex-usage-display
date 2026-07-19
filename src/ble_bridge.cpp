@@ -76,6 +76,7 @@ class StatusCallbacks final : public BLECharacteristicCallbacks {
     state.limit_window_minutes = document["u"] | 0UL;
     state.quota_reset_seconds = document["q"] | 0UL;
     state.tokens_today = document["d"] | 0ULL;
+    state.tokens_today_estimated = (document["e"] | 0) == 1;
     state.tokens_7d = document["w"] | 0ULL;
     state.reset_credits =
         min<uint8_t>(document["c"] | 0, static_cast<uint8_t>(255));
