@@ -38,7 +38,6 @@ lv_obj_t* reset_segments[6] = {};
 lv_obj_t* today_value_label = nullptr;
 lv_obj_t* week_value_label = nullptr;
 lv_obj_t* run_value_label = nullptr;
-lv_obj_t* expiry_title_label = nullptr;
 lv_obj_t* expiry_value_label = nullptr;
 lv_obj_t* quick_actions_overlay = nullptr;
 lv_obj_t* pairing_overlay = nullptr;
@@ -78,8 +77,8 @@ void dispatchOverlayAction(lv_event_t* event) {
   dispatchAction(event);
 }
 
-lv_obj_t* createActionButton(lv_obj_t* parent, const char* text, int y,
-                             UiAction action) {
+void createActionButton(lv_obj_t* parent, const char* text, int y,
+                        UiAction action) {
   lv_obj_t* button = lv_btn_create(parent);
   lv_obj_set_pos(button, 50, y);
   lv_obj_set_size(button, 350, 58);
@@ -96,7 +95,6 @@ lv_obj_t* createActionButton(lv_obj_t* parent, const char* text, int y,
   lv_label_set_text(label, text);
   styleLabel(label, &lv_font_montserrat_18, kWhite);
   lv_obj_center(label);
-  return button;
 }
 
 void hideToast(lv_timer_t*) {
@@ -248,8 +246,6 @@ void uiCreate(UiActionHandler handler) {
     lv_obj_set_style_bg_opa(divider, LV_OPA_COVER, LV_PART_MAIN);
   }
 
-  expiry_title_label = nullptr;
-
   quick_actions_overlay = lv_obj_create(screen);
   lv_obj_set_size(quick_actions_overlay, 480, 480);
   lv_obj_set_pos(quick_actions_overlay, 0, 0);
@@ -340,7 +336,7 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
   if (!state.data_valid) {
     lv_arc_set_value(quota_arc, 0);
     lv_label_set_text(quota_title_label, "CODEX LEFT");
-    lv_label_set_text(quota_value_label, "--");
+    lv_label_set_text(quota_value_label, "");
     lv_obj_align(quota_value_label, LV_ALIGN_TOP_MID, -20, 165);
     lv_obj_add_flag(percent_label, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(quota_reset_label, "WAITING FOR DATA");

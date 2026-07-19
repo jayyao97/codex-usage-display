@@ -189,7 +189,6 @@ def main() -> int:
             "session_id": hook_input.get("session_id"),
             "turn_id": hook_input.get("turn_id"),
             "transcript_path": hook_input.get("transcript_path"),
-            "cwd": hook_input.get("cwd"),
             "at": time.time(),
         }
         if not event["session_id"] or not event["turn_id"]:

@@ -30,7 +30,6 @@ class BleCompanion:
         self._heartbeat_seconds = heartbeat_seconds
         self._status_changed = status_changed
         self._commands: asyncio.Queue = asyncio.Queue()
-        self._connected = False
         self._recent_results = {}
 
     async def run_forever(self) -> None:
@@ -68,14 +67,12 @@ class BleCompanion:
             disconnected = asyncio.Event()
 
             def on_disconnect(_: Any) -> None:
-                self._connected = False
                 disconnected.set()
 
             try:
                 async with BleakClient(
                     device, disconnected_callback=on_disconnect
                 ) as client:
-                    self._connected = True
                     backoff = 1.0
                     logger.info("已连接 %s", device.name or device.address)
 

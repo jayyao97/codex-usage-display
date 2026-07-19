@@ -333,12 +333,14 @@ void refreshUi() {
 void updateBle() {
   AppState received_state;
   if (bleTakeState(received_state)) {
+    const uint8_t previous_active_threads =
+        app_state.data_valid ? app_state.active_threads : 0;
     const bool was_running =
         app_state.data_valid && app_state.active_threads > 0;
     const bool is_running = received_state.active_threads > 0;
     app_state = received_state;
     state_received_at_ms = millis();
-    if (!was_running && is_running) {
+    if (received_state.active_threads > previous_active_threads) {
       setScreenOn(true);
       last_activity_ms = millis();
     } else if (was_running && !is_running && screen_on) {

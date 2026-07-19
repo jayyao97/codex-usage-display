@@ -105,9 +105,8 @@ class ResultCallbacks final : public BLECharacteristicCallbacks {
     }
 
     BleActionResult result{};
-    result.request_id = document["id"] | 0UL;
-    result.ok = (document["ok"] | 0) == 1;
-    const char* message = document["m"] | (result.ok ? "DONE" : "FAILED");
+    const bool ok = (document["ok"] | 0) == 1;
+    const char* message = document["m"] | (ok ? "DONE" : "FAILED");
     strlcpy(result.message, message, sizeof(result.message));
     xQueueOverwrite(result_queue, &result);
   }

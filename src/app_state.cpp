@@ -59,8 +59,6 @@ const char* connectionLabel(ConnectionState state) {
   switch (state) {
     case ConnectionState::kDisconnected:
       return "OFFLINE";
-    case ConnectionState::kConnecting:
-      return "SEARCHING";
     case ConnectionState::kSyncing:
       return "SYNCING";
     case ConnectionState::kLinked:

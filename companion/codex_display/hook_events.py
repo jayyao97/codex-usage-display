@@ -21,7 +21,6 @@ DEFAULT_EVENTS_PATH = (
 
 @dataclass
 class PendingTurn:
-    session_id: str
     turn_id: str
     transcript_path: Optional[str]
     phase: str
@@ -79,7 +78,6 @@ class HookActivityTracker:
 
         if event_name == "UserPromptSubmit":
             self._turns[key] = PendingTurn(
-                session_id=session_id,
                 turn_id=turn_id,
                 transcript_path=path,
                 phase="pending_start",
@@ -89,7 +87,6 @@ class HookActivityTracker:
         else:
             existing = self._turns.get(key)
             self._turns[key] = PendingTurn(
-                session_id=session_id,
                 turn_id=turn_id,
                 transcript_path=path or (
                     existing.transcript_path if existing is not None else None

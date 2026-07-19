@@ -5,7 +5,6 @@
 
 enum class ConnectionState : uint8_t {
   kDisconnected,
-  kConnecting,
   kSyncing,
   kLinked,
   kStale,
