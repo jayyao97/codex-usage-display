@@ -36,12 +36,14 @@ class HookActivityTracker:
         start_timeout_seconds: float = 10,
         stale_seconds: float = 30 * 60,
         max_event_bytes: int = 1024 * 1024,
+        poll_seconds: float = 1,
     ) -> None:
         self._on_change = on_change
         self._events_path = events_path
         self._start_timeout_seconds = start_timeout_seconds
         self._stale_seconds = stale_seconds
         self._max_event_bytes = max_event_bytes
+        self._poll_seconds = poll_seconds
         self._lock_path = events_path.with_name("hook-events.lock")
         self._archive_path = events_path.with_name(events_path.name + ".1")
         self._turns: Dict[Tuple[str, str], PendingTurn] = {}
@@ -174,7 +176,7 @@ class HookActivityTracker:
                 if line:
                     if not line.endswith("\n"):
                         handle.seek(position)
-                        await asyncio.sleep(0.05)
+                        await asyncio.sleep(min(0.05, self._poll_seconds))
                         continue
                     try:
                         event = json.loads(line)
@@ -192,6 +194,6 @@ class HookActivityTracker:
                             continue
                         await self.process_event(event)
                     await self.reconcile()
-                    await asyncio.sleep(0.25)
+                    await asyncio.sleep(self._poll_seconds)
         finally:
             handle.close()

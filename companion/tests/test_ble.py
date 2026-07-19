@@ -18,6 +18,27 @@ class FakeBleClient:
 
 
 class BleTests(unittest.IsolatedAsyncioTestCase):
+    async def test_connection_refreshes_before_first_status(self):
+        order = []
+
+        async def status():
+            order.append("status")
+            return b"{}"
+
+        async def refresh():
+            order.append("refresh")
+
+        companion = BleCompanion(status, refresh)
+        client = FakeBleClient(expected_writes=1)
+        client.start_notify = AsyncMock()
+        disconnected = asyncio.Event()
+        disconnected.set()
+
+        await companion._run_connection(client, disconnected)
+
+        self.assertEqual(order, ["refresh", "status"])
+        self.assertFalse(companion.connected_event.is_set())
+
     async def test_status_change_sends_without_waiting_for_heartbeat(self):
         async def status():
             return b'{"a":1}'

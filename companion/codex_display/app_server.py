@@ -82,6 +82,12 @@ class AppServerClient:
                 pass
             self._reader_task = None
 
+    async def wait_for_exit(self) -> None:
+        if self._reader_task is None:
+            raise AppServerError("Codex app-server 尚未启动")
+        await self._reader_task
+        raise AppServerError("Codex app-server 已退出")
+
     async def request(
         self, method: str, params: Optional[Dict[str, Any]] = None
     ) -> Dict[str, Any]:

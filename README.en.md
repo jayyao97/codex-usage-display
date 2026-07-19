@@ -95,6 +95,42 @@ To verify Codex data without connecting over BLE:
 
 The output is the same compact JSON payload that the firmware receives. By default, the companion sends a heartbeat every 15 seconds and reloads the full data every 60 seconds.
 
+### Run in the background on macOS
+
+First use `./companion/run.sh` to complete pairing and verify normal operation.
+Stop the manually started companion, then install the user LaunchAgent:
+
+```bash
+python3 companion/install_launch_agent.py
+```
+
+The installer prepares `companion/.venv` and its dependencies before starting
+the companion with that fixed Python environment. It starts automatically after
+login and restarts only after an abnormal exit. Logs rotate at 1 MiB with one
+archive retained:
+
+```text
+~/Library/Logs/CodexUsageDisplay/companion.log
+~/Library/Logs/CodexUsageDisplay/companion.log.1
+```
+
+To stop and uninstall the background service:
+
+```bash
+python3 companion/install_launch_agent.py --uninstall
+```
+
+When no device is connected, the companion continues processing the hook file
+once per second but pauses the 30-second `thread/list` reconciliation. Each BLE
+scan lasts 10 seconds, with repeated failures backing off to at most 60 seconds
+of sleep. After reconnecting, the companion performs a full Codex refresh before
+sending its first packet. If the app-server exits unexpectedly, the companion
+also exits so the LaunchAgent can restart both processes.
+
+The Python process used by the LaunchAgent may require separate macOS Bluetooth
+permission. `NEW TASK` still requires Accessibility permission. After the first
+installation, test Bluetooth off/on, sleep/wake, and logging out and back in.
+
 ### Real-time RUN hooks
 
 Run the installer to merge the RUN hooks into the existing global `~/.codex/hooks.json`:
@@ -127,7 +163,7 @@ The companion consumes that queue as follows:
 2. The companion confirms it after finding `task_started` with the same `turn_id` in the corresponding transcript. If not confirmed within 10 seconds, the provisional state is removed.
 3. `Stop` marks a task as pending stop without immediately decrementing RUN.
 4. RUN is decremented only after `task_complete` with the same `turn_id` appears in the transcript, then immediately pushed over BLE.
-5. Recent tasks are additionally reconciled every 30 seconds to recover from missed hooks or process failures.
+5. While BLE is connected, recent tasks are additionally reconciled every 30 seconds to recover from missed hooks or process failures.
 
 Hook writers and companion rotation share a cross-process file lock and use append-only writes, so concurrent Codex tasks do not overwrite one another. When the event file reaches 1 MiB, the companion rotates it to `hook-events.jsonl.1` and starts a fresh queue. One archive is retained, keeping the two files to approximately 2 MiB in total.
 
@@ -194,6 +230,7 @@ src/fonts/                Custom main-percentage font
 companion/codex_display/  macOS companion source
 companion/tests/          Data-semantics and protocol tests
 companion/run.sh          One-command companion launcher
+companion/install_launch_agent.py macOS background-service installer
 companion/install_hook.py Global hook installer and uninstaller
 .codex/hooks/             Local event-forwarder invoked by the global hooks
 docs/BLE_PROTOCOL.md      BLE UUIDs, message formats, and security constraints

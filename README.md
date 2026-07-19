@@ -93,6 +93,38 @@ Waveshare ESP32-S3-Touch-AMOLED-2.16 的 Arduino 固件和 macOS Companion。设
 
 输出是一条与固件实际接收内容相同的紧凑 JSON。Companion 默认每 15 秒发送心跳，每 60 秒重新读取完整数据。
 
+### macOS 后台常驻
+
+先使用 `./companion/run.sh` 完成首次配对并确认运行正常，然后停止手动启动的
+Companion，安装用户级 LaunchAgent：
+
+```bash
+python3 companion/install_launch_agent.py
+```
+
+安装器会提前创建 `companion/.venv` 并安装依赖，再使用固定的 Python 环境启动
+Companion。它会在登录后自动运行，并只在异常退出时重新启动。日志达到 1 MiB
+后轮转并保留一份历史，位于：
+
+```text
+~/Library/Logs/CodexUsageDisplay/companion.log
+~/Library/Logs/CodexUsageDisplay/companion.log.1
+```
+
+卸载并停止后台服务：
+
+```bash
+python3 companion/install_launch_agent.py --uninstall
+```
+
+未连接设备时，Companion 仍以 1 秒间隔处理 Hook 文件，但暂停每 30 秒的
+`thread/list` 校准。BLE 每次扫描 10 秒，连续失败时逐步退避到最多休眠 60 秒。
+重新连接后会先完整刷新 Codex 数据，再发送第一包。app-server 异常退出时，
+Companion 会一并退出并由 LaunchAgent 重新启动。
+
+LaunchAgent 使用的 Python 进程可能需要单独获得 macOS 蓝牙权限；`NEW TASK`
+仍需要辅助功能权限。首次安装后请实测蓝牙关闭/开启、睡眠/唤醒和重新登录。
+
 ### 实时 RUN Hook
 
 执行安装器，将 RUN Hook 合并进现有的全局 `~/.codex/hooks.json`：
@@ -132,7 +164,7 @@ Companion 从该队列接收提示：
 3. `Stop` 只标记为待停止，不直接减少 RUN。
 4. 对应 transcript 出现同一 `turn_id` 的 `task_complete` 后才减少 RUN，
    并立即推送 BLE。
-5. 每 30 秒额外读取一次最近任务进行校准，修复漏 Hook 或进程异常。
+5. BLE 已连接时，每 30 秒额外读取一次最近任务进行校准，修复漏 Hook 或进程异常。
 
 Hook 写入和 Companion 轮转共享一个跨进程文件锁，并使用追加写入，多个 Codex
 任务同时触发也不会互相覆盖。事件文件达到 1 MiB 后，Companion 会将它轮转为
@@ -207,6 +239,7 @@ src/fonts/               主百分比定制字体
 companion/codex_display/ macOS Companion 源码
 companion/tests/         数据口径和协议测试
 companion/run.sh         Companion 一键启动脚本
+companion/install_launch_agent.py macOS 后台常驻安装与卸载
 companion/install_hook.py 全局 Hook 安装与卸载
 .codex/hooks/            全局 Hook 调用的本地事件转发脚本
 docs/BLE_PROTOCOL.md     BLE UUID、消息格式和安全约束

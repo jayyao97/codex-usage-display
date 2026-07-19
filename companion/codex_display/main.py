@@ -1,7 +1,9 @@
 import argparse
 import asyncio
 import logging
+import os
 from dataclasses import replace
+from logging.handlers import RotatingFileHandler
 from typing import Optional, Set
 
 from .app_server import AppServerClient
@@ -97,10 +99,14 @@ class SnapshotCache:
 
 
 async def reconcile_active_loop(
-    cache: SnapshotCache, seconds: float
+    cache: SnapshotCache,
+    seconds: float,
+    connected: asyncio.Event,
 ) -> None:
     while True:
         await asyncio.sleep(seconds)
+        if not connected.is_set():
+            continue
         try:
             await cache.reconcile_active()
         except Exception as error:
@@ -127,13 +133,34 @@ async def run(args: argparse.Namespace) -> None:
         )
         hook_task = asyncio.create_task(activity.run_forever())
         reconcile_task = asyncio.create_task(
-            reconcile_active_loop(cache, args.run_reconcile_seconds)
+            reconcile_active_loop(
+                cache,
+                args.run_reconcile_seconds,
+                companion.connected_event,
+            )
         )
+        companion_task = asyncio.create_task(companion.run_forever())
+        app_server_task = asyncio.create_task(client.wait_for_exit())
+        tasks = [
+            hook_task,
+            reconcile_task,
+            companion_task,
+            app_server_task,
+        ]
         try:
-            await companion.run_forever()
+            done, _ = await asyncio.wait(
+                [companion_task, app_server_task],
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            if app_server_task in done:
+                app_server_task.result()
+            companion_task.result()
+            raise RuntimeError("BLE Companion 意外退出")
         finally:
-            hook_task.cancel()
-            reconcile_task.cancel()
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
     finally:
         await client.stop()
 
@@ -158,14 +185,29 @@ def build_parser() -> argparse.ArgumentParser:
 
 def main() -> None:
     args = build_parser().parse_args()
+    log_path = os.environ.get("CODEX_DISPLAY_LOG")
+    handlers = None
+    if log_path:
+        handlers = [
+            RotatingFileHandler(
+                log_path,
+                maxBytes=1024 * 1024,
+                backupCount=1,
+                encoding="utf-8",
+            )
+        ]
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
+        handlers=handlers,
     )
     try:
         asyncio.run(run(args))
     except KeyboardInterrupt:
         pass
+    except Exception:
+        logging.exception("Companion 异常退出")
+        raise SystemExit(1)
 
 
 if __name__ == "__main__":
