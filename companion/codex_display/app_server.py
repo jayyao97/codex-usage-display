@@ -23,7 +23,8 @@ def find_codex_binary() -> str:
         return bundled
 
     raise AppServerError(
-        "找不到 Codex CLI；请设置 CODEX_BIN，或安装包含 codex 的 ChatGPT/Codex App"
+        "Codex CLI not found; set CODEX_BIN or install the ChatGPT/Codex app "
+        "that bundles codex"
     )
 
 
@@ -84,9 +85,9 @@ class AppServerClient:
 
     async def wait_for_exit(self) -> None:
         if self._reader_task is None:
-            raise AppServerError("Codex app-server 尚未启动")
+            raise AppServerError("Codex app-server has not started")
         await self._reader_task
-        raise AppServerError("Codex app-server 已退出")
+        raise AppServerError("Codex app-server exited")
 
     async def request(
         self, method: str, params: Optional[Dict[str, Any]] = None
@@ -112,7 +113,7 @@ class AppServerClient:
 
     async def _send(self, message: Dict[str, Any]) -> None:
         if self._process is None or self._process.stdin is None:
-            raise AppServerError("Codex app-server 尚未启动")
+            raise AppServerError("Codex app-server has not started")
         payload = json.dumps(message, separators=(",", ":")) + "\n"
         self._process.stdin.write(payload.encode("utf-8"))
         await self._process.stdin.drain()
@@ -123,7 +124,7 @@ class AppServerClient:
         while True:
             line = await self._process.stdout.readline()
             if not line:
-                error = AppServerError("Codex app-server 已退出")
+                error = AppServerError("Codex app-server exited")
                 for future in self._pending.values():
                     if not future.done():
                         future.set_exception(error)

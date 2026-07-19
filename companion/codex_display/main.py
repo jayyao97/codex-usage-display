@@ -71,7 +71,8 @@ class SnapshotCache:
             self._sequence += 1
             current = self._current_snapshot()
             logging.info(
-                "数据已更新：剩余 %d%%，today %s%d，7d %d，reset %d，running %d",
+                "Data updated: remaining %d%%, today %s%d, 7d %d, "
+                "reset %d, running %d",
                 current.remaining_percent,
                 "~" if current.tokens_today_estimated else "",
                 current.tokens_today,
@@ -84,7 +85,7 @@ class SnapshotCache:
         try:
             count, paths = await collect_active_thread_state(self._client)
         except Exception as error:
-            logging.warning("RUN 即时校准失败：%s", error)
+            logging.warning("Immediate RUN reconciliation failed: %s", error)
             count = None
             paths = set()
         async with self._lock:
@@ -122,7 +123,7 @@ async def reconcile_active_loop(
         try:
             await cache.reconcile_active()
         except Exception as error:
-            logging.warning("RUN 定期校准失败：%s", error)
+            logging.warning("Periodic RUN reconciliation failed: %s", error)
 
 
 async def run(args: argparse.Namespace) -> None:
@@ -167,7 +168,7 @@ async def run(args: argparse.Namespace) -> None:
             if app_server_task in done:
                 app_server_task.result()
             companion_task.result()
-            raise RuntimeError("BLE Companion 意外退出")
+            raise RuntimeError("BLE companion exited unexpectedly")
         finally:
             for task in tasks:
                 if not task.done():
@@ -218,7 +219,7 @@ def main() -> None:
     except KeyboardInterrupt:
         pass
     except Exception:
-        logging.exception("Companion 异常退出")
+        logging.exception("Companion exited unexpectedly")
         raise SystemExit(1)
 
 
