@@ -19,6 +19,8 @@ constexpr uint32_t kTextSecondary = 0xAEB8BD;
 constexpr uint32_t kTrack = 0x24282B;
 constexpr uint32_t kDivider = 0x303538;
 constexpr uint32_t kAmber = 0xFFB800;
+constexpr uint32_t kOffline = 0xFF5C5C;
+constexpr uint32_t kLinked = 0x4DA3FF;
 constexpr int kResetSegmentWidth = 22;
 constexpr int kResetSegmentGap = 8;
 constexpr int kResetTitleGap = 10;
@@ -325,13 +327,37 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
 
   const bool linked = state.connection == ConnectionState::kLinked;
   const bool stale = state.connection == ConnectionState::kStale;
+  const bool disconnected =
+      state.connection == ConnectionState::kDisconnected;
   const String connection =
       String(LV_SYMBOL_BLUETOOTH) + " " + connectionLabel(state.connection);
   lv_label_set_text(connection_label, connection.c_str());
+  const uint32_t connection_color =
+      linked ? kLinked
+             : (disconnected ? kOffline : (stale ? kAmber : kTextMuted));
   lv_obj_set_style_text_color(
-      connection_label,
-      color(linked ? kTextSecondary : (stale ? kAmber : kTextMuted)),
+      connection_label, color(connection_color),
       LV_PART_MAIN);
+  lv_obj_set_style_bg_color(connection_label, color(connection_color),
+                            LV_PART_MAIN);
+  lv_obj_set_style_bg_opa(
+      connection_label,
+      disconnected ? LV_OPA_30
+                   : ((linked || stale) ? LV_OPA_20 : LV_OPA_TRANSP),
+      LV_PART_MAIN);
+  lv_obj_set_style_radius(connection_label, 8, LV_PART_MAIN);
+  lv_obj_set_style_pad_hor(connection_label, 8, LV_PART_MAIN);
+  lv_obj_set_style_pad_ver(connection_label, 4, LV_PART_MAIN);
+  lv_obj_align(connection_label, LV_ALIGN_TOP_RIGHT, -24, 16);
+
+  const uint32_t data_accent =
+      linked ? kCyan : (stale ? kAmber : kTextMuted);
+  lv_obj_set_style_arc_color(quota_arc, color(data_accent),
+                             LV_PART_INDICATOR);
+  lv_obj_set_style_text_color(quota_title_label, color(data_accent),
+                              LV_PART_MAIN);
+  lv_obj_set_style_text_color(quota_reset_label, color(data_accent),
+                              LV_PART_MAIN);
 
   if (!state.data_valid) {
     lv_arc_set_value(quota_arc, 0);
