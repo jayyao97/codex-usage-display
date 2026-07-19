@@ -4,11 +4,25 @@
 
 Arduino firmware and a macOS companion for the Waveshare ESP32-S3-Touch-AMOLED-2.16. The device receives real Codex account usage and task status from the local computer over encrypted BLE. Codex credentials are never stored on the ESP32.
 
-![Codex Usage Display hardware](docs/device-photo.jpg)
+<p align="center">
+  <img src="docs/device-photo.jpg" alt="Codex Usage Display hardware" width="480">
+</p>
 
 > Current status: first usable hardware release. The firmware, BLE companion,
 > global hooks, tests, and PlatformIO build are working end to end. Only the
 > specified Waveshare board and macOS are currently supported.
+
+## Contents
+
+- [Features](#features)
+- [Recommended: PlatformIO](#recommended-platformio)
+- [Arduino IDE (alternative)](#arduino-ide-alternative)
+- [Start the macOS Companion](#start-the-macos-companion)
+- [Repository structure](#repository-structure)
+- [Tests](#tests)
+- [Data semantics and boundaries](#data-semantics-and-boundaries)
+- [Current limitations](#current-limitations)
+- [Contributing, security, and licenses](#contributing-security-and-licenses)
 
 ## Features
 

@@ -82,7 +82,7 @@ class HookActivityTracker:
             self._turns[key] = PendingTurn(
                 turn_id=turn_id,
                 transcript_path=path,
-                phase="pending_start",
+                phase="pending_start" if path is not None else "active",
                 created_at=now,
                 counted=True,
             )
