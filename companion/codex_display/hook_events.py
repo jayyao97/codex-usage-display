@@ -88,15 +88,23 @@ class HookActivityTracker:
             )
         else:
             existing = self._turns.get(key)
-            self._turns[key] = PendingTurn(
-                turn_id=turn_id,
-                transcript_path=path or (
-                    existing.transcript_path if existing is not None else None
-                ),
-                phase="pending_stop",
-                created_at=existing.created_at if existing is not None else now,
-                counted=existing.counted if existing is not None else False,
+            resolved_path = path or (
+                existing.transcript_path if existing is not None else None
             )
+            if resolved_path is None:
+                self._turns.pop(key, None)
+            else:
+                self._turns[key] = PendingTurn(
+                    turn_id=turn_id,
+                    transcript_path=resolved_path,
+                    phase="pending_stop",
+                    created_at=(
+                        existing.created_at if existing is not None else now
+                    ),
+                    counted=(
+                        existing.counted if existing is not None else False
+                    ),
+                )
         await self._on_change()
 
     async def reconcile(self, now: Optional[float] = None) -> None:
