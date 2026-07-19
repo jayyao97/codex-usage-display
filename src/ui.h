@@ -13,6 +13,7 @@ using UiActionHandler = void (*)(UiAction action);
 
 void uiCreate(UiActionHandler action_handler);
 void uiUpdate(const AppState& state, uint32_t elapsed_seconds);
+void uiUpdateBattery(int percent, bool charging);
 void uiShowQuickActions();
 void uiShowToast(const char* text);
 void uiShowPairingCode(uint32_t passkey);

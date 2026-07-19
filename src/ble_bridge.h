@@ -10,6 +10,7 @@ struct BleActionResult {
 
 bool bleBegin();
 bool bleConnected();
+void bleMaintainConnection();
 void bleStartAdvertising();
 bool bleTakeState(AppState& state);
 bool bleTakeActionResult(BleActionResult& result);
