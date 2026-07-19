@@ -472,8 +472,12 @@ void uiUpdateBattery(int percent, bool charging) {
 
   lv_label_set_text_fmt(battery_label, charging ? "CHG %d%%" : "BAT %d%%",
                         percent);
-  lv_obj_set_style_text_color(
-      battery_label, color(charging ? kCyan : kTextSecondary), LV_PART_MAIN);
+  const uint32_t battery_color =
+      charging ? kCyan
+               : (percent < 10 ? kOffline
+                               : (percent < 20 ? kAmber : kTextSecondary));
+  lv_obj_set_style_text_color(battery_label, color(battery_color),
+                              LV_PART_MAIN);
   lv_obj_clear_flag(battery_label, LV_OBJ_FLAG_HIDDEN);
   lv_obj_align_to(battery_label, connection_label, LV_ALIGN_OUT_LEFT_MID, -12,
                   0);
