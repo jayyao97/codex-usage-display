@@ -4,7 +4,7 @@
 
 Waveshare ESP32-S3-Touch-AMOLED-2.16 的 Arduino 固件和 macOS Companion。设备通过加密 BLE 接收本机 Codex 的真实账户用量和任务状态，不在 ESP32 中保存 Codex 凭据。
 
-![首页设计稿](docs/ui/main-ring-open-arc-corrected-480.png)
+![Codex Usage Display 实机照片](docs/device-photo.jpg)
 
 > 当前状态：首个可用硬件版本。固件、BLE Companion、全局 Hook、测试和
 > PlatformIO 构建均已打通；目前只支持指定的 Waveshare 开发板和 macOS。
