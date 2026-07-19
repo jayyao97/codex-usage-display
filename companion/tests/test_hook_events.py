@@ -55,6 +55,9 @@ class HookActivityTests(unittest.IsolatedAsyncioTestCase):
         await self.tracker.process_event(submit)
         self.assertEqual(self.tracker.extra_count(set()), 1)
 
+        await self.tracker.reconcile(now=111)
+        self.assertEqual(self.tracker.extra_count(set()), 1)
+
         stop = self._event("Stop")
         stop["transcript_path"] = None
         await self.tracker.process_event(stop)
