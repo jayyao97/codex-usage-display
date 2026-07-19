@@ -42,7 +42,7 @@ class BleCompanion:
         backoff = 1.0
         while True:
             try:
-                logger.info("正在搜索 %s…", self._device_name)
+                logger.info("Scanning for %s...", self._device_name)
                 device = await BleakScanner.find_device_by_filter(
                     lambda candidate, advertisement: (
                         (candidate.name or "") == self._device_name
@@ -58,11 +58,11 @@ class BleCompanion:
                 self.connected_event.clear()
                 if "turned off" in str(error).lower():
                     logger.error(
-                        "蓝牙不可用或当前启动程序没有权限；请检查“系统设置 → "
-                        "隐私与安全性 → 蓝牙”"
+                        "Bluetooth is unavailable or permission is missing; "
+                        "check System Settings > Privacy & Security > Bluetooth"
                     )
                 else:
-                    logger.warning("BLE 扫描失败：%s", error)
+                    logger.warning("BLE scan failed: %s", error)
                 await asyncio.sleep(backoff)
                 backoff = min(backoff * 2, 60)
                 continue
@@ -83,12 +83,12 @@ class BleCompanion:
             try:
                 await client.connect()
                 backoff = 1.0
-                logger.info("已连接 %s", device.name or device.address)
+                logger.info("Connected to %s", device.name or device.address)
                 await self._run_connection(client, disconnected)
             except asyncio.CancelledError:
                 raise
             except Exception as error:
-                logger.warning("BLE 连接中断：%s", error)
+                logger.warning("BLE connection interrupted: %s", error)
             finally:
                 self.connected_event.clear()
                 await self._disconnect(client)
@@ -105,9 +105,9 @@ class BleCompanion:
                 timeout=BLE_DISCONNECT_TIMEOUT_SECONDS,
             )
         except asyncio.TimeoutError:
-            logger.warning("BLE 断开超时，继续重新扫描")
+            logger.warning("BLE disconnect timed out; resuming scan")
         except Exception as error:
-            logger.warning("BLE 断开失败：%s", error)
+            logger.warning("BLE disconnect failed: %s", error)
 
     async def _run_connection(
         self, client: Any, disconnected: asyncio.Event
@@ -176,7 +176,7 @@ class BleCompanion:
                 timeout=BLE_OPERATION_TIMEOUT_SECONDS,
             )
         except asyncio.TimeoutError as error:
-            raise asyncio.TimeoutError("BLE GATT 写入超时") from error
+            raise asyncio.TimeoutError("BLE GATT write timed out") from error
 
     async def _command_loop(self, client: Any) -> None:
         while client.is_connected:
@@ -196,7 +196,7 @@ class BleCompanion:
             except ValueError as error:
                 ok, message = False, str(error)
             except Exception as error:
-                logger.exception("设备动作执行失败：%s", error)
+                logger.exception("Device action failed: %s", error)
                 ok, message = False, "ACTION FAILED"
             payload = encode_result(request_id, ok, message)
             if request_id > 0:
