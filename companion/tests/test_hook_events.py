@@ -49,6 +49,18 @@ class HookActivityTests(unittest.IsolatedAsyncioTestCase):
         await self.tracker.reconcile()
         self.assertEqual(self.tracker.extra_count(set()), 0)
 
+    async def test_pathless_stop_clears_sidechat_immediately(self):
+        submit = self._event("UserPromptSubmit")
+        submit["transcript_path"] = None
+        await self.tracker.process_event(submit)
+        self.assertEqual(self.tracker.extra_count(set()), 1)
+
+        stop = self._event("Stop")
+        stop["transcript_path"] = None
+        await self.tracker.process_event(stop)
+
+        self.assertEqual(self.tracker.extra_count(set()), 0)
+
     async def test_unconfirmed_submit_expires(self):
         tracker = HookActivityTracker(
             self.changed,
