@@ -22,6 +22,7 @@ constexpr char kCommandUuid[] = "7d8b6c20-8f6d-4b44-a0f8-1b6570c0de03";
 constexpr char kResultUuid[] = "7d8b6c20-8f6d-4b44-a0f8-1b6570c0de04";
 constexpr char kDeviceInfoUuid[] = "7d8b6c20-8f6d-4b44-a0f8-1b6570c0de05";
 constexpr uint8_t kProtocolVersion = 1;
+constexpr uint32_t kStatusWatchdogMs = 45 * 1000;
 
 BLEServer* server = nullptr;
 BLECharacteristic* command_characteristic = nullptr;
@@ -30,6 +31,8 @@ QueueHandle_t result_queue = nullptr;
 QueueHandle_t pairing_code_queue = nullptr;
 QueueHandle_t pairing_finished_queue = nullptr;
 volatile bool connected = false;
+volatile bool status_received_on_connection = false;
+volatile uint32_t last_status_at_ms = 0;
 uint32_t next_request_id = 1;
 uint32_t command_session_id = 0;
 uint32_t last_sequence = 0;
@@ -38,12 +41,14 @@ class ServerCallbacks final : public BLEServerCallbacks {
  public:
   void onConnect(BLEServer*) override {
     connected = true;
+    status_received_on_connection = false;
     last_sequence = 0;
     Serial.println("[ble] connected");
   }
 
   void onDisconnect(BLEServer* current_server) override {
     connected = false;
+    status_received_on_connection = false;
     Serial.println("[ble] disconnected");
     current_server->startAdvertising();
   }
@@ -92,6 +97,8 @@ class StatusCallbacks final : public BLECharacteristicCallbacks {
     state.data_valid = true;
 
     last_sequence = sequence;
+    last_status_at_ms = millis();
+    status_received_on_connection = true;
     xQueueOverwrite(state_queue, &state);
     Serial.printf("[ble] status seq=%lu\n",
                   static_cast<unsigned long>(sequence));
@@ -206,6 +213,17 @@ bool bleBegin() {
 
 bool bleConnected() {
   return connected;
+}
+
+void bleMaintainConnection() {
+  if (!connected || !status_received_on_connection || server == nullptr ||
+      millis() - last_status_at_ms < kStatusWatchdogMs) {
+    return;
+  }
+
+  status_received_on_connection = false;
+  Serial.println("[ble] status watchdog expired; disconnecting stale client");
+  server->disconnect(server->getConnId());
 }
 
 void bleStartAdvertising() {

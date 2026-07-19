@@ -334,6 +334,8 @@ void refreshUi() {
 }
 
 void updateBle() {
+  bleMaintainConnection();
+
   AppState received_state;
   if (bleTakeState(received_state)) {
     const uint8_t previous_active_threads =
