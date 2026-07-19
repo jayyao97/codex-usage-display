@@ -81,7 +81,19 @@ class SnapshotCache:
             )
 
     async def activity_changed(self) -> None:
+        try:
+            count, paths = await collect_active_thread_state(self._client)
+        except Exception as error:
+            logging.warning("RUN 即时校准失败：%s", error)
+            count = None
+            paths = set()
         async with self._lock:
+            if self._snapshot is not None and count is not None:
+                self._snapshot = replace(
+                    self._snapshot,
+                    active_threads=count,
+                )
+                self._active_paths = paths
             self._sequence += 1
             self.status_changed.set()
 

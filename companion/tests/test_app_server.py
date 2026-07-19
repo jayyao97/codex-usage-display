@@ -1,12 +1,16 @@
 import asyncio
+import json
 import unittest
 
 from companion.codex_display.app_server import AppServerClient, AppServerError
-from companion.codex_display.main import reconcile_active_loop
+from companion.codex_display.main import SnapshotCache, reconcile_active_loop
 from companion.codex_display.metrics import collect_snapshot
 
 
 class FakeClient:
+    def __init__(self):
+        self.threads = [{"status": {"type": "active"}}]
+
     async def request(self, method, params=None):
         if method == "account/rateLimits/read":
             return {
@@ -21,7 +25,7 @@ class FakeClient:
             return {"dailyUsageBuckets": []}
         if method == "thread/list":
             self.thread_params = params
-            return {"data": [{"status": {"type": "active"}}]}
+            return {"data": self.threads}
         raise AssertionError(method)
 
 
@@ -36,6 +40,18 @@ class AppServerAdapterTests(unittest.TestCase):
 
 
 class LifecycleTests(unittest.IsolatedAsyncioTestCase):
+    async def test_hook_change_reconciles_cached_active_count(self):
+        client = FakeClient()
+        cache = SnapshotCache(client, refresh_seconds=60)
+        await cache.refresh()
+        self.assertEqual(json.loads(await cache.encoded())["a"], 1)
+
+        client.threads = []
+        await cache.activity_changed()
+
+        self.assertEqual(json.loads(await cache.encoded())["a"], 0)
+        self.assertTrue(cache.status_changed.is_set())
+
     async def test_wait_for_exit_reports_unexpected_app_server_exit(self):
         client = AppServerClient("/usr/bin/false")
         client._reader_task = asyncio.create_task(asyncio.sleep(0))
