@@ -44,7 +44,7 @@ With the three physical buttons along the top edge when viewed from the front:
 
 ## Arduino IDE
 
-Open [esp32.ino](esp32.ino) directly from the repository root. Do not select only the containing folder in the file picker. Arduino IDE will also compile the implementation under `src/`.
+Open [esp32/esp32.ino](esp32/esp32.ino) directly. Do not select only the containing folder in the file picker. Arduino IDE will also compile the implementation under `src/`.
 
 Install **esp32 by Espressif Systems** from Boards Manager. Version 3.3.10 has been verified. `Arduino Nano ESP32` belongs to a different board package and is not appropriate for this Waveshare board.
 
@@ -217,7 +217,7 @@ If the download port is not detected, hold BOOT while connecting USB-C and relea
 ## Repository structure
 
 ```text
-esp32.ino                 Arduino IDE sketch entry point
+esp32/esp32.ino           Arduino IDE sketch entry point
 lv_conf.h                 LVGL 8 configuration
 src/board_config.h        Board pins and display parameters
 src/app_state.h           Main-screen data model

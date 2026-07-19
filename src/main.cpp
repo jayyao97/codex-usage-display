@@ -300,10 +300,13 @@ void updateButtons() {
       },
       []() {
         setScreenOn(true);
-        uiShowToast(bleClearBonds() ? "PAIRING CLEARED" : "CLEAR FAILED");
+        const bool cleared = bleClearBonds();
+        uiShowToast(cleared ? "PAIRING CLEARED" : "CLEAR FAILED");
         lv_timer_handler();
-        delay(750);
-        ESP.restart();
+        if (cleared) {
+          delay(750);
+          ESP.restart();
+        }
       });
 
   updateButton(

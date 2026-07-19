@@ -6,6 +6,10 @@
 #include <BLEServer.h>
 #include <BLESecurity.h>
 
+#if defined(CONFIG_NIMBLE_ENABLED)
+#include <host/ble_store.h>
+#endif
+
 #include <freertos/FreeRTOS.h>
 #include <freertos/queue.h>
 
@@ -249,27 +253,50 @@ bool bleSendAction(const char* action) {
 bool bleClearBonds() {
 #if defined(CONFIG_BLUEDROID_ENABLED)
   int count = esp_ble_get_bond_device_num();
-  if (count <= 0) {
+  if (count == 0) {
     return true;
+  }
+  if (count < 0) {
+    Serial.printf("[ble] failed to count bonds: %d\n", count);
+    return false;
   }
 
   auto* devices = static_cast<esp_ble_bond_dev_t*>(
       malloc(sizeof(esp_ble_bond_dev_t) * count));
-  if (devices == nullptr ||
-      esp_ble_get_bond_device_list(&count, devices) != ESP_OK) {
+  if (devices == nullptr) {
+    Serial.println("[ble] failed to allocate bond list");
+    return false;
+  }
+
+  const esp_err_t list_result =
+      esp_ble_get_bond_device_list(&count, devices);
+  if (list_result != ESP_OK) {
+    Serial.printf("[ble] failed to read bonds: %d\n", list_result);
     free(devices);
     return false;
   }
 
   bool cleared = true;
   for (int i = 0; i < count; ++i) {
-    if (esp_ble_remove_bond_device(devices[i].bd_addr) != ESP_OK) {
+    const esp_err_t remove_result =
+        esp_ble_remove_bond_device(devices[i].bd_addr);
+    if (remove_result != ESP_OK) {
+      Serial.printf("[ble] failed to remove bond %d: %d\n", i,
+                    remove_result);
       cleared = false;
     }
   }
   free(devices);
   return cleared;
+#elif defined(CONFIG_NIMBLE_ENABLED)
+  const int result = ble_store_clear();
+  if (result != 0) {
+    Serial.printf("[ble] failed to clear NimBLE bonds: %d\n", result);
+    return false;
+  }
+  return true;
 #else
+  Serial.println("[ble] no supported BLE host stack");
   return false;
 #endif
 }
