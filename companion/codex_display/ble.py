@@ -31,6 +31,7 @@ class BleCompanion:
         self._status_changed = status_changed
         self._commands: asyncio.Queue = asyncio.Queue()
         self._recent_results = {}
+        self.connected_event = asyncio.Event()
 
     async def run_forever(self) -> None:
         from bleak import BleakClient, BleakScanner
@@ -46,27 +47,31 @@ class BleCompanion:
                         in [uuid.lower() for uuid in advertisement.service_uuids]
                     ),
                     timeout=10,
+                    service_uuids=[SERVICE_UUID],
                 )
             except asyncio.CancelledError:
                 raise
             except Exception as error:
+                self.connected_event.clear()
                 if "turned off" in str(error).lower():
                     logger.error(
-                        "macOS 未向当前启动程序授予蓝牙权限；请在“系统设置 → "
-                        "隐私与安全性 → 蓝牙”中允许 Terminal"
+                        "蓝牙不可用或当前启动程序没有权限；请检查“系统设置 → "
+                        "隐私与安全性 → 蓝牙”"
                     )
                 else:
                     logger.warning("BLE 扫描失败：%s", error)
-                await asyncio.sleep(10)
+                await asyncio.sleep(backoff)
+                backoff = min(backoff * 2, 60)
                 continue
             if device is None:
                 await asyncio.sleep(backoff)
-                backoff = min(backoff * 2, 30)
+                backoff = min(backoff * 2, 60)
                 continue
 
             disconnected = asyncio.Event()
 
             def on_disconnect(_: Any) -> None:
+                self.connected_event.clear()
                 disconnected.set()
 
             try:
@@ -75,32 +80,51 @@ class BleCompanion:
                 ) as client:
                     backoff = 1.0
                     logger.info("已连接 %s", device.name or device.address)
-
-                    def on_command(_: Any, data: bytearray) -> None:
-                        self._commands.put_nowait(bytes(data))
-
-                    await client.start_notify(COMMAND_UUID, on_command)
-                    await self._send_status(client)
-
-                    heartbeat = asyncio.create_task(self._heartbeat_loop(client))
-                    commands = asyncio.create_task(self._command_loop(client))
-                    wait_disconnect = asyncio.create_task(disconnected.wait())
-                    done, pending = await asyncio.wait(
-                        [heartbeat, commands, wait_disconnect],
-                        return_when=asyncio.FIRST_COMPLETED,
-                    )
-                    for task in pending:
-                        task.cancel()
-                    for task in done:
-                        if task is not wait_disconnect:
-                            task.result()
+                    await self._run_connection(client, disconnected)
             except asyncio.CancelledError:
                 raise
             except Exception as error:
                 logger.warning("BLE 连接中断：%s", error)
+            finally:
+                self.connected_event.clear()
 
             await asyncio.sleep(backoff)
-            backoff = min(backoff * 2, 30)
+            backoff = min(backoff * 2, 60)
+
+    async def _run_connection(
+        self, client: Any, disconnected: asyncio.Event
+    ) -> None:
+        def on_command(_: Any, data: bytearray) -> None:
+            self._commands.put_nowait(bytes(data))
+
+        await client.start_notify(COMMAND_UUID, on_command)
+        await self._request_refresh()
+        await self._send_status(client)
+        if disconnected.is_set() or not client.is_connected:
+            return
+        self.connected_event.set()
+
+        heartbeat = asyncio.create_task(self._heartbeat_loop(client))
+        commands = asyncio.create_task(self._command_loop(client))
+        wait_disconnect = asyncio.create_task(disconnected.wait())
+        tasks = [heartbeat, commands, wait_disconnect]
+        try:
+            done, pending = await asyncio.wait(
+                tasks,
+                return_when=asyncio.FIRST_COMPLETED,
+            )
+            for task in pending:
+                task.cancel()
+            await asyncio.gather(*pending, return_exceptions=True)
+            for task in done:
+                if task is not wait_disconnect:
+                    task.result()
+        finally:
+            self.connected_event.clear()
+            for task in tasks:
+                if not task.done():
+                    task.cancel()
+            await asyncio.gather(*tasks, return_exceptions=True)
 
     async def _heartbeat_loop(self, client: Any) -> None:
         while client.is_connected:
