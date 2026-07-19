@@ -176,7 +176,7 @@ class BleCompanion:
                 timeout=BLE_OPERATION_TIMEOUT_SECONDS,
             )
         except asyncio.TimeoutError as error:
-            raise TimeoutError("BLE GATT 写入超时") from error
+            raise asyncio.TimeoutError("BLE GATT 写入超时") from error
 
     async def _command_loop(self, client: Any) -> None:
         while client.is_connected:
