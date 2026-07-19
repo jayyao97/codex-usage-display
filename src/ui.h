@@ -17,3 +17,4 @@ void uiShowQuickActions();
 void uiShowToast(const char* text);
 void uiShowPairingCode(uint32_t passkey);
 void uiHidePairingCode();
+bool uiPairingCodeVisible();

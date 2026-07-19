@@ -74,6 +74,10 @@ void closeOverlay(lv_event_t*) {
   lv_obj_add_flag(quick_actions_overlay, LV_OBJ_FLAG_HIDDEN);
 }
 
+void closePairingOverlay(lv_event_t*) {
+  uiHidePairingCode();
+}
+
 void dispatchOverlayAction(lv_event_t* event) {
   lv_obj_add_flag(quick_actions_overlay, LV_OBJ_FLAG_HIDDEN);
   dispatchAction(event);
@@ -293,6 +297,9 @@ void uiCreate(UiActionHandler handler) {
   lv_obj_set_style_border_color(pairing_overlay, color(kCyan), LV_PART_MAIN);
   lv_obj_set_style_border_width(pairing_overlay, 1, LV_PART_MAIN);
   lv_obj_clear_flag(pairing_overlay, LV_OBJ_FLAG_SCROLLABLE);
+  lv_obj_add_flag(pairing_overlay, LV_OBJ_FLAG_CLICKABLE);
+  lv_obj_add_event_cb(pairing_overlay, closePairingOverlay, LV_EVENT_CLICKED,
+                      nullptr);
 
   lv_obj_t* pairing_title = lv_label_create(pairing_overlay);
   lv_label_set_text(pairing_title, "ENTER ON YOUR MAC");
@@ -305,7 +312,7 @@ void uiCreate(UiActionHandler handler) {
   lv_obj_align(pairing_code_label, LV_ALIGN_CENTER, 0, 10);
 
   lv_obj_t* pairing_hint = lv_label_create(pairing_overlay);
-  lv_label_set_text(pairing_hint, "Bluetooth secure pairing");
+  lv_label_set_text(pairing_hint, "TAP TO DISMISS");
   styleLabel(pairing_hint, &lv_font_montserrat_14, kTextMuted);
   lv_obj_align(pairing_hint, LV_ALIGN_BOTTOM_MID, 0, -30);
   lv_obj_add_flag(pairing_overlay, LV_OBJ_FLAG_HIDDEN);
@@ -480,4 +487,8 @@ void uiShowPairingCode(uint32_t passkey) {
 
 void uiHidePairingCode() {
   lv_obj_add_flag(pairing_overlay, LV_OBJ_FLAG_HIDDEN);
+}
+
+bool uiPairingCodeVisible() {
+  return !lv_obj_has_flag(pairing_overlay, LV_OBJ_FLAG_HIDDEN);
 }
