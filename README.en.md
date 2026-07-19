@@ -42,7 +42,39 @@ With the three physical buttons along the top edge when viewed from the front:
 
 `focus_codex` activates the ChatGPT/Codex app on the Mac. `refresh` immediately reloads the data. `new_task` uses macOS Accessibility to send `⌘N`.
 
-## Arduino IDE
+## Recommended: PlatformIO
+
+PlatformIO is the primary development path for this project. It pins the major
+dependency versions used by the Waveshare Arduino example:
+
+- Arduino-ESP32 3.3.5
+- LVGL 8.4.0
+- Arduino_GFX 1.6.4
+- SensorLib 0.3.3
+- XPowersLib 0.2.6
+
+After installing PlatformIO:
+
+```bash
+pio run
+```
+
+The firmware image is written to:
+
+```text
+.pio/build/esp32-s3-touch-amoled-216/firmware.bin
+```
+
+With the board connected:
+
+```bash
+pio run -t upload
+pio device monitor
+```
+
+If the download port is not detected, hold BOOT while connecting USB-C and release it when the port appears. Uploading replaces the firmware currently installed on the device.
+
+## Arduino IDE (alternative)
 
 Open [esp32/esp32.ino](esp32/esp32.ino) directly. Do not select only the containing folder in the file picker. Arduino IDE will also compile the implementation under `src/`.
 
@@ -182,37 +214,6 @@ If the companion reports that Bluetooth is off while the macOS menu bar shows it
 The first use of `NEW TASK` also requires Terminal permission under **Privacy & Security → Accessibility**. If permission is denied, the action returns `ALLOW ACCESSIBILITY`; other features continue to work.
 
 To move the display to another computer, stop the old companion first. While the device is running normally, hold the left BOOT button for 3 seconds. After `PAIRING CLEARED`, the device restarts. Run `./companion/run.sh` on the new computer and enter the new six-digit pairing code. Do not hold BOOT during power-on or reset, because that enters ESP32 download mode.
-
-## PlatformIO
-
-The PlatformIO project pins the major dependency versions used by the Waveshare Arduino example:
-
-- Arduino-ESP32 3.3.5
-- LVGL 8.4.0
-- Arduino_GFX 1.6.4
-- SensorLib 0.3.3
-- XPowersLib 0.2.6
-
-After installing PlatformIO:
-
-```bash
-pio run
-```
-
-The firmware image is written to:
-
-```text
-.pio/build/esp32-s3-touch-amoled-216/firmware.bin
-```
-
-With the board connected:
-
-```bash
-pio run -t upload
-pio device monitor
-```
-
-If the download port is not detected, hold BOOT while connecting USB-C and release it when the port appears. Uploading replaces the firmware currently installed on the device.
 
 ## Repository structure
 
