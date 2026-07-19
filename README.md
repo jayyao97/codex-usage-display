@@ -42,7 +42,7 @@ Waveshare ESP32-S3-Touch-AMOLED-2.16 的 Arduino 固件和 macOS Companion。设
 
 ## 使用 Arduino IDE
 
-直接打开根目录下的 [esp32.ino](esp32.ino)，不要在文件选择器里只选文件夹。Arduino IDE 会同时编译 `src/` 中的实际源码。
+直接打开 [esp32/esp32.ino](esp32/esp32.ino)，不要在文件选择器里只选文件夹。Arduino IDE 会同时编译 `src/` 中的实际源码。
 
 在 Boards Manager 中安装 **esp32 by Espressif Systems**。当前已验证 3.3.10 可以完整编译。`Arduino Nano ESP32` 属于另一套 board package，不适用于这块 Waveshare 板。
 
@@ -226,7 +226,7 @@ pio device monitor
 ## 代码结构
 
 ```text
-esp32.ino                Arduino IDE 工程入口
+esp32/esp32.ino          Arduino IDE 工程入口
 lv_conf.h                LVGL 8 配置
 src/board_config.h       板级引脚和显示参数
 src/app_state.h          首页数据模型
