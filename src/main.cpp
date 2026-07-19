@@ -51,6 +51,7 @@ uint32_t state_received_at_ms = 0;
 uint32_t last_ui_refresh_ms = 0;
 uint32_t last_activity_ms = 0;
 bool screen_on = true;
+bool power_ready = false;
 
 struct ButtonState {
   int pin;
@@ -181,6 +182,8 @@ bool initPower() {
   power.enableLongPressShutdown();
   power.setLongPressPowerOFF();
   power.setChargeTargetVoltage(3);
+  power.enableBattDetection();
+  power.enableBattVoltageMeasure();
   Serial.println("[pmu] long-press shutdown configured: 6 seconds");
   return true;
 }
@@ -331,6 +334,9 @@ void refreshUi() {
   last_ui_refresh_ms = now;
   const uint32_t state_age_seconds = (now - state_received_at_ms) / 1000UL;
   uiUpdate(app_state, state_age_seconds);
+  if (power_ready) {
+    uiUpdateBattery(power.getBatteryPercent(), power.isCharging());
+  }
 }
 
 void updateBle() {
@@ -392,7 +398,7 @@ void setup() {
   pinMode(board::kCodexButton, INPUT_PULLUP);
   Wire.begin(board::kI2cSda, board::kI2cScl);
 
-  const bool power_ok = initPower();
+  power_ready = initPower();
   const bool display_ok = initDisplay();
   const bool touch_ok = initTouch();
 
@@ -403,7 +409,7 @@ void setup() {
     }
   }
 
-  if (!power_ok) {
+  if (!power_ready) {
     uiShowToast("PMU OFFLINE");
   } else if (!touch_ok) {
     uiShowToast("TOUCH OFFLINE");

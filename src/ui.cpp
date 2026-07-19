@@ -31,6 +31,7 @@ UiActionHandler action_handler = nullptr;
 lv_obj_t* quota_arc = nullptr;
 lv_obj_t* time_label = nullptr;
 lv_obj_t* connection_label = nullptr;
+lv_obj_t* battery_label = nullptr;
 lv_obj_t* quota_title_label = nullptr;
 lv_obj_t* quota_value_label = nullptr;
 lv_obj_t* percent_label = nullptr;
@@ -183,6 +184,10 @@ void uiCreate(UiActionHandler handler) {
       connection_label, dispatchAction, LV_EVENT_CLICKED,
       reinterpret_cast<void*>(
           static_cast<uintptr_t>(UiAction::kReconnect)));
+
+  battery_label = createLabel("BAT --%", &lv_font_montserrat_14,
+                              kTextSecondary, LV_ALIGN_TOP_RIGHT, -142, 21);
+  lv_obj_add_flag(battery_label, LV_OBJ_FLAG_HIDDEN);
 
   quota_arc = lv_arc_create(screen);
   lv_obj_set_size(quota_arc, 304, 304);
@@ -457,6 +462,21 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
   lv_obj_set_style_text_color(expiry_value_label,
                               color(expiring_soon ? kAmber : kWhite),
                               LV_PART_MAIN);
+}
+
+void uiUpdateBattery(int percent, bool charging) {
+  if (percent < 0 || percent > 100) {
+    lv_obj_add_flag(battery_label, LV_OBJ_FLAG_HIDDEN);
+    return;
+  }
+
+  lv_label_set_text_fmt(battery_label, charging ? "CHG %d%%" : "BAT %d%%",
+                        percent);
+  lv_obj_set_style_text_color(
+      battery_label, color(charging ? kCyan : kTextSecondary), LV_PART_MAIN);
+  lv_obj_clear_flag(battery_label, LV_OBJ_FLAG_HIDDEN);
+  lv_obj_align_to(battery_label, connection_label, LV_ALIGN_OUT_LEFT_MID, -12,
+                  0);
 }
 
 void uiShowQuickActions() {
