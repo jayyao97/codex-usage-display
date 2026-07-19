@@ -1,5 +1,7 @@
 # Codex Usage Display
 
+[简体中文](README.md) | [English](README.en.md)
+
 Waveshare ESP32-S3-Touch-AMOLED-2.16 的 Arduino 固件和 macOS Companion。设备通过加密 BLE 接收本机 Codex 的真实账户用量和任务状态，不在 ESP32 中保存 Codex 凭据。
 
 ![首页设计稿](docs/ui/main-ring-open-arc-corrected-480.png)
