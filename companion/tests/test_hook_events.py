@@ -64,6 +64,25 @@ class HookActivityTests(unittest.IsolatedAsyncioTestCase):
 
         self.assertEqual(self.tracker.extra_count(set()), 0)
 
+    async def test_pathless_turns_are_deduplicated_by_session(self):
+        first = self._event("UserPromptSubmit")
+        first["transcript_path"] = None
+        await self.tracker.process_event(first)
+
+        second = self._event("UserPromptSubmit")
+        second["turn_id"] = "turn-2"
+        second["transcript_path"] = None
+        await self.tracker.process_event(second)
+
+        self.assertEqual(self.tracker.extra_count(set()), 1)
+
+        third = self._event("UserPromptSubmit")
+        third["session_id"] = "session-2"
+        third["transcript_path"] = None
+        await self.tracker.process_event(third)
+
+        self.assertEqual(self.tracker.extra_count(set()), 2)
+
     async def test_unconfirmed_submit_expires(self):
         tracker = HookActivityTracker(
             self.changed,
