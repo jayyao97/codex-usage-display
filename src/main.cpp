@@ -18,6 +18,7 @@
 namespace {
 
 constexpr uint32_t kUiRefreshMs = 1000;
+constexpr uint32_t kScreenOffLvglRefreshMs = 50;
 constexpr uint32_t kIdleScreenTimeoutMs = 15 * 1000;
 constexpr uint32_t kRunningScreenTimeoutMs = 60 * 1000;
 constexpr uint32_t kDataStaleMs = 60 * 1000;
@@ -49,6 +50,7 @@ volatile bool touch_pending = false;
 AppState app_state;
 uint32_t state_received_at_ms = 0;
 uint32_t last_ui_refresh_ms = 0;
+uint32_t last_lvgl_refresh_ms = 0;
 uint32_t last_activity_ms = 0;
 bool screen_on = true;
 bool power_ready = false;
@@ -70,7 +72,13 @@ void setScreenOn(bool on) {
     return;
   }
   screen_on = on;
-  display->setBrightness(on ? board::kDisplayBrightness : 0);
+  if (on) {
+    display->displayOn();
+    display->setBrightness(board::kDisplayBrightness);
+  } else {
+    display->setBrightness(0);
+    display->displayOff();
+  }
 }
 
 void IRAM_ATTR onTouchInterrupt() {
@@ -83,6 +91,17 @@ bool consumeTouchInterrupt() {
   touch_pending = false;
   interrupts();
   return pending;
+}
+
+void updateTouchWake() {
+  if (screen_on || !consumeTouchInterrupt()) {
+    return;
+  }
+
+  touch.getPoint(touch_x, touch_y, touch.getSupportTouchPoint());
+  Serial.println("[display] wake by touch");
+  setScreenOn(true);
+  last_activity_ms = millis();
 }
 
 void displayFlush(lv_disp_drv_t* driver, const lv_area_t* area,
@@ -127,13 +146,6 @@ void readTouch(lv_indev_drv_t*, lv_indev_data_t* data) {
   const uint8_t points =
       touch.getPoint(touch_x, touch_y, touch.getSupportTouchPoint());
   if (points == 0) {
-    data->state = LV_INDEV_STATE_REL;
-    return;
-  }
-
-  if (!screen_on) {
-    setScreenOn(true);
-    last_activity_ms = millis();
     data->state = LV_INDEV_STATE_REL;
     return;
   }
@@ -327,6 +339,10 @@ void updateButtons() {
 }
 
 void refreshUi() {
+  if (!screen_on) {
+    return;
+  }
+
   const uint32_t now = millis();
   if (now - last_ui_refresh_ms < kUiRefreshMs) {
     return;
@@ -425,16 +441,24 @@ void setup() {
 
 void loop() {
   updateButtons();
+  updateTouchWake();
   updateBle();
   refreshUi();
-  lv_timer_handler();
 
+  const uint32_t lvgl_now = millis();
+  if (screen_on ||
+      lvgl_now - last_lvgl_refresh_ms >= kScreenOffLvglRefreshMs) {
+    last_lvgl_refresh_ms = lvgl_now;
+    lv_timer_handler();
+  }
+
+  const uint32_t now = millis();
   const uint32_t screen_timeout_ms =
       app_state.data_valid && app_state.active_threads > 0
           ? kRunningScreenTimeoutMs
           : kIdleScreenTimeoutMs;
   if (screen_on && !uiPairingCodeVisible() &&
-      millis() - last_activity_ms >= screen_timeout_ms) {
+      now - last_activity_ms >= screen_timeout_ms) {
     setScreenOn(false);
   }
 
