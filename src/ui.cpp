@@ -208,16 +208,16 @@ void uiCreate(UiActionHandler handler) {
                                   LV_ALIGN_TOP_MID, 0, 126);
 
   quota_value_label = createLabel("68", &font_montserrat_100, kWhite,
-                                  LV_ALIGN_TOP_MID, -20, 165);
+                                  LV_ALIGN_TOP_MID, -6, 165);
   percent_label = lv_label_create(screen);
   lv_label_set_text(percent_label, "%");
   styleLabel(percent_label, &lv_font_montserrat_26, kWhite);
-  lv_obj_align_to(percent_label, quota_value_label, LV_ALIGN_OUT_RIGHT_MID, 2,
-                  12);
+  lv_obj_align_to(percent_label, quota_value_label, LV_ALIGN_OUT_RIGHT_BOTTOM,
+                  4, 0);
 
   quota_reset_label =
-      createLabel("QUOTA RESET 2d 8h", &lv_font_montserrat_14, kCyan,
-                  LV_ALIGN_TOP_MID, 0, 334);
+      createLabel(LV_SYMBOL_REFRESH " 2d 8h", &lv_font_montserrat_26, kCyan,
+                  LV_ALIGN_TOP_MID, 0, 285);
 
   reset_title_label = createLabel("RESET", &lv_font_montserrat_12, kTextMuted,
                                   LV_ALIGN_TOP_LEFT, 0, 359);
@@ -375,7 +375,7 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
     lv_arc_set_value(quota_arc, 0);
     lv_label_set_text(quota_title_label, "CODEX LEFT");
     lv_label_set_text(quota_value_label, "");
-    lv_obj_align(quota_value_label, LV_ALIGN_TOP_MID, -20, 165);
+    lv_obj_align(quota_value_label, LV_ALIGN_TOP_MID, -6, 165);
     lv_obj_add_flag(percent_label, LV_OBJ_FLAG_HIDDEN);
     lv_label_set_text(quota_reset_label, "WAITING FOR DATA");
     lv_label_set_text(today_value_label, "-");
@@ -400,9 +400,9 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
 
   lv_arc_set_value(quota_arc, std::min<uint8_t>(state.remaining_percent, 100));
   lv_label_set_text_fmt(quota_value_label, "%u", state.remaining_percent);
-  lv_obj_align(quota_value_label, LV_ALIGN_TOP_MID, -20, 165);
-  lv_obj_align_to(percent_label, quota_value_label, LV_ALIGN_OUT_RIGHT_MID, 2,
-                  12);
+  lv_obj_align(quota_value_label, LV_ALIGN_TOP_MID, -6, 165);
+  lv_obj_align_to(percent_label, quota_value_label, LV_ALIGN_OUT_RIGHT_BOTTOM,
+                  4, 0);
 
   const uint32_t quota_seconds =
       state.quota_reset_seconds > elapsed_seconds
@@ -413,7 +413,7 @@ void uiUpdate(const AppState& state, uint32_t elapsed_seconds) {
           ? state.next_credit_expiry_seconds - elapsed_seconds
           : 0;
   const String quota_reset =
-      "QUOTA RESET " + formatCountdown(quota_seconds);
+      String(LV_SYMBOL_REFRESH) + " " + formatCountdown(quota_seconds);
   lv_label_set_text(quota_reset_label, quota_reset.c_str());
 
   String today_tokens = formatCompactTokens(state.tokens_today);
