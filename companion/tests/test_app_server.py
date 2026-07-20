@@ -1,6 +1,8 @@
 import asyncio
 import json
 import unittest
+from datetime import datetime, timezone
+from unittest import mock
 
 from companion.codex_display.app_server import AppServerClient, AppServerError
 from companion.codex_display.main import SnapshotCache, reconcile_active_loop
@@ -10,6 +12,7 @@ from companion.codex_display.metrics import collect_snapshot
 class FakeClient:
     def __init__(self):
         self.threads = [{"status": {"type": "active"}}]
+        self.usage = {"dailyUsageBuckets": []}
 
     async def request(self, method, params=None):
         if method == "account/rateLimits/read":
@@ -22,7 +25,7 @@ class FakeClient:
                 }
             }
         if method == "account/usage/read":
-            return {"dailyUsageBuckets": []}
+            return self.usage
         if method == "thread/list":
             self.thread_params = params
             return {"data": self.threads}
@@ -40,6 +43,42 @@ class AppServerAdapterTests(unittest.TestCase):
 
 
 class LifecycleTests(unittest.IsolatedAsyncioTestCase):
+    async def test_today_usage_uses_larger_local_value(self):
+        client = FakeClient()
+        cache = SnapshotCache(client, refresh_seconds=60)
+        await cache.refresh()
+
+        with mock.patch(
+            "companion.codex_display.main.read_local_tokens",
+            return_value=250,
+        ):
+            payload = json.loads(await cache.encoded())
+
+        self.assertEqual(payload["d"], 250)
+        self.assertEqual(payload["e"], 1)
+
+    async def test_today_usage_keeps_larger_official_value(self):
+        client = FakeClient()
+        client.usage = {
+            "dailyUsageBuckets": [
+                {
+                    "startDate": datetime.now(timezone.utc).date().isoformat(),
+                    "tokens": 250,
+                }
+            ]
+        }
+        cache = SnapshotCache(client, refresh_seconds=60)
+        await cache.refresh()
+
+        with mock.patch(
+            "companion.codex_display.main.read_local_tokens",
+            return_value=100,
+        ):
+            payload = json.loads(await cache.encoded())
+
+        self.assertEqual(payload["d"], 250)
+        self.assertEqual(payload["e"], 0)
+
     async def test_hook_change_reconciles_cached_active_count(self):
         client = FakeClient()
         cache = SnapshotCache(client, refresh_seconds=60)
