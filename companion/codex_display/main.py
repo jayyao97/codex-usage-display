@@ -45,10 +45,13 @@ class SnapshotCache:
     def _current_snapshot(self) -> Snapshot:
         assert self._snapshot is not None
         snapshot = self._snapshot
-        if snapshot.tokens_today_estimated:
-            local_tokens = read_local_tokens()
-            if local_tokens is not None:
-                snapshot = replace(snapshot, tokens_today=local_tokens)
+        local_tokens = read_local_tokens()
+        if local_tokens is not None and local_tokens > snapshot.tokens_today:
+            snapshot = replace(
+                snapshot,
+                tokens_today=local_tokens,
+                tokens_today_estimated=True,
+            )
         return replace(snapshot, active_threads=self._active_count())
 
     async def encoded(self) -> bytes:
