@@ -59,7 +59,7 @@ class HookActivityTracker:
                     continue
                 identities.add(("path", path))
             else:
-                identities.add(("turn", key))
+                identities.add(("session", key[0]))
         return len(identities)
 
     async def process_event(self, event: Dict[str, object]) -> None:
