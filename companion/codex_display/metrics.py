@@ -109,14 +109,12 @@ def datetime_offset_seconds(now: Optional[int] = None) -> int:
 
 
 def thread_is_active(thread: Dict[str, Any]) -> bool:
-    status = thread.get("status") or {}
-    if status.get("type") == "active":
-        return True
-
     path = thread.get("path")
-    if not path or not os.path.isfile(path):
-        return False
-    return rollout_is_active(path)
+    if path and os.path.isfile(path):
+        return rollout_is_active(path)
+
+    status = thread.get("status") or {}
+    return status.get("type") == "active"
 
 
 def rollout_is_active(
