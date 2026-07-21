@@ -8,6 +8,7 @@ from companion.codex_display.metrics import (
     build_snapshot,
     rollout_is_active,
     rollout_turn_state,
+    thread_is_active,
 )
 
 
@@ -132,6 +133,15 @@ class MetricsTests(unittest.TestCase):
     def test_rollout_completion_is_not_active(self):
         path = self._write_rollout(["task_started", "task_complete"])
         self.assertFalse(rollout_is_active(path))
+
+    def test_rollout_completion_overrides_stale_active_status(self):
+        path = self._write_rollout(["task_started", "task_complete"])
+
+        self.assertFalse(
+            thread_is_active(
+                {"status": {"type": "active"}, "path": path}
+            )
+        )
 
     def test_rollout_ignores_trailing_non_event_records(self):
         handle = tempfile.NamedTemporaryFile(delete=False)
