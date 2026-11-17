@@ -1,6 +1,6 @@
 import asyncio
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock, Mock, patch
 
 from companion.codex_display.ble import BleCompanion
 
@@ -28,6 +28,31 @@ class HangingBleClient:
 
 
 class BleTests(unittest.IsolatedAsyncioTestCase):
+    async def test_scan_miss_recovers_connected_macos_display(self):
+        companion = BleCompanion(AsyncMock(), AsyncMock())
+        connected = Mock()
+        with patch("bleak.BleakScanner.find_device_by_filter", return_value=None), patch(
+            "companion.codex_display.ble.sys.platform", "darwin"
+        ), patch("companion.codex_display.ble._connected_macos_display", return_value=connected):
+            self.assertIs(await companion._find_device(), connected)
+
+    async def test_scan_hit_does_not_use_connected_lookup(self):
+        companion = BleCompanion(AsyncMock(), AsyncMock())
+        advertised = Mock()
+        with patch("bleak.BleakScanner.find_device_by_filter", return_value=advertised), patch(
+            "companion.codex_display.ble.sys.platform", "darwin"
+        ), patch("companion.codex_display.ble._connected_macos_display") as lookup:
+            self.assertIs(await companion._find_device(), advertised)
+            lookup.assert_not_called()
+
+    async def test_non_macos_scan_miss_keeps_existing_retry_path(self):
+        companion = BleCompanion(AsyncMock(), AsyncMock())
+        with patch("bleak.BleakScanner.find_device_by_filter", return_value=None), patch(
+            "companion.codex_display.ble.sys.platform", "linux"
+        ), patch("companion.codex_display.ble._connected_macos_display") as lookup:
+            self.assertIsNone(await companion._find_device())
+            lookup.assert_not_called()
+
     async def test_connection_refreshes_before_first_status(self):
         order = []
 
