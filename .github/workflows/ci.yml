@@ -11,7 +11,7 @@ permissions:
 
 jobs:
   companion:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04 # setup-python provides Python 3.9 for this image.
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-python@v6

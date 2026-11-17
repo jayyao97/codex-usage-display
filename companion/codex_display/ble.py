@@ -1,5 +1,6 @@
 import asyncio
 import logging
+import sys
 from typing import Any, Awaitable, Callable, Optional
 
 from .actions import perform_action
@@ -16,6 +17,27 @@ logger = logging.getLogger(__name__)
 
 BLE_OPERATION_TIMEOUT_SECONDS = 10
 BLE_DISCONNECT_TIMEOUT_SECONDS = 5
+
+
+def _connected_macos_display(device_name: str):
+    from CoreBluetooth import CBUUID
+    from bleak.backends.corebluetooth.CentralManagerDelegate import CentralManagerDelegate
+    from bleak.backends.device import BLEDevice
+
+    manager = CentralManagerDelegate.alloc().init()
+    peripherals = manager.central_manager.retrieveConnectedPeripheralsWithServices_(
+        [CBUUID.UUIDWithString_(SERVICE_UUID)]
+    )
+    for peripheral in peripherals:
+        if peripheral.name() == device_name:
+            # Bleak must connect with the manager that retrieved the peripheral.
+            return BLEDevice(
+                peripheral.identifier().UUIDString(),
+                device_name,
+                (peripheral, manager),
+                rssi=127,  # Required by Bleak 0.22; no advertisement RSSI is available.
+            )
+    return None
 
 
 class BleCompanion:
@@ -36,22 +58,32 @@ class BleCompanion:
         self._recent_results = {}
         self.connected_event = asyncio.Event()
 
+    async def _find_device(self):
+        from bleak import BleakScanner
+
+        device = await BleakScanner.find_device_by_filter(
+            lambda candidate, advertisement: (
+                (candidate.name or "") == self._device_name
+                or SERVICE_UUID.lower()
+                in [uuid.lower() for uuid in advertisement.service_uuids]
+            ),
+            timeout=10,
+            service_uuids=[SERVICE_UUID],
+        )
+        if device is None and sys.platform == "darwin":
+            device = _connected_macos_display(self._device_name)
+            if device is not None:
+                logger.info("Scan missed; found %s in macOS connected devices", device.name)
+        return device
+
     async def run_forever(self) -> None:
-        from bleak import BleakClient, BleakScanner
+        from bleak import BleakClient
 
         backoff = 1.0
         while True:
             try:
                 logger.info("Scanning for %s...", self._device_name)
-                device = await BleakScanner.find_device_by_filter(
-                    lambda candidate, advertisement: (
-                        (candidate.name or "") == self._device_name
-                        or SERVICE_UUID.lower()
-                        in [uuid.lower() for uuid in advertisement.service_uuids]
-                    ),
-                    timeout=10,
-                    service_uuids=[SERVICE_UUID],
-                )
+                device = await self._find_device()
             except asyncio.CancelledError:
                 raise
             except Exception as error:
@@ -121,6 +153,7 @@ class BleCompanion:
         if disconnected.is_set() or not client.is_connected:
             return
         self.connected_event.set()
+        logger.info("First status write acknowledged by %s", self._device_name)
 
         heartbeat = asyncio.create_task(self._heartbeat_loop(client))
         commands = asyncio.create_task(self._command_loop(client))
